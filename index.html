@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meal & Expense Log</title>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)"></script>
-    <link href="[https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap)" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0d1117; color: #f0f6fc; padding-bottom: 50px; }
@@ -64,30 +64,32 @@
     <div class="container">
         <!-- Add Entry Form -->
         <section class="card">
-            <h2>
+            <h2 id="formTitle">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                Add What You Ate / Spent
+                Add Entry
             </h2>
 
-            <label>Quick Food Presets:</label>
-            <div class="presets">
-                <button type="button" onclick="setPreset('Breakfast', 50)" class="preset-btn">🍳 Breakfast (৳50)</button>
-                <button type="button" onclick="setPreset('Lunch', 120)" class="preset-btn">🍛 Lunch (৳120)</button>
-                <button type="button" onclick="setPreset('Dinner', 100)" class="preset-btn">🍽️ Dinner (৳100)</button>
-                <button type="button" onclick="setPreset('Biryani', 180)" class="preset-btn">🍗 Biryani (৳180)</button>
-                <button type="button" onclick="setPreset('Tea & Snacks', 30)" class="preset-btn">☕ Tea & Snacks (৳30)</button>
+            <div id="presetsBox">
+                <label>Quick Food Presets:</label>
+                <div class="presets">
+                    <button type="button" onclick="setPreset('Breakfast', 50)" class="preset-btn">🍳 Breakfast (৳50)</button>
+                    <button type="button" onclick="setPreset('Lunch', 120)" class="preset-btn">🍛 Lunch (৳120)</button>
+                    <button type="button" onclick="setPreset('Dinner', 100)" class="preset-btn">🍽️ Dinner (৳100)</button>
+                    <button type="button" onclick="setPreset('Biryani', 180)" class="preset-btn">🍗 Biryani (৳180)</button>
+                    <button type="button" onclick="setPreset('Tea & Snacks', 30)" class="preset-btn">☕ Tea & Snacks (৳30)</button>
+                </div>
             </div>
 
             <form id="entryForm" onsubmit="handleFormSubmit(event)">
                 <label>Type</label>
-                <select id="type">
+                <select id="type" onchange="updateFormLabels()">
                     <option value="Meal">Meal / Food</option>
                     <option value="Expense">Other Expense</option>
                     <option value="Income">Income / Fund</option>
                 </select>
 
-                <label>What did you eat / buy?</label>
-                <input type="text" id="description" required placeholder="e.g., Chicken Biryani, Morning Tea">
+                <label id="descLabel">What did you eat / buy?</label>
+                <input type="text" id="description" placeholder="e.g., Chicken Biryani, Morning Tea">
 
                 <label>Amount (৳)</label>
                 <input type="number" step="0.01" id="amount" required placeholder="0.00">
@@ -102,7 +104,7 @@
         <!-- History & Export -->
         <section class="card">
             <div class="flex-between" style="margin-bottom: 12px;">
-                <h2 style="margin: 0;">Food & Expense History</h2>
+                <h2 style="margin: 0;">History & Records</h2>
                 <button onclick="exportToExcel()" class="btn-export">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Export Excel
@@ -122,7 +124,7 @@
         <div class="modal-box">
             <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 8px;">Google Sheet Sync Settings</h3>
             <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Enter your Google Apps Script Web App URL.</p>
-            <input type="text" id="scriptUrlInput" placeholder="[https://script.google.com/macros/s/.../exec](https://script.google.com/macros/s/.../exec)">
+            <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
             <div style="display: flex; gap: 8px;">
                 <button onclick="saveSettings()" class="btn-primary" style="padding: 10px;">Save</button>
                 <button onclick="closeSettings()" style="background: #374151; color: #fff; border-radius: 12px; padding: 10px; font-weight: 600; width: 100%;">Cancel</button>
@@ -136,10 +138,35 @@
 
         document.getElementById('entryDate').valueAsDate = new Date();
 
+        function updateFormLabels() {
+            const type = document.getElementById('type').value;
+            const descLabel = document.getElementById('descLabel');
+            const descInput = document.getElementById('description');
+            const presetsBox = document.getElementById('presetsBox');
+
+            if (type === 'Income') {
+                descLabel.innerText = "Source / Note (Optional)";
+                descInput.placeholder = "e.g., Pocket Money, Tutoring Salary";
+                descInput.required = false;
+                presetsBox.style.display = 'none';
+            } else if (type === 'Expense') {
+                descLabel.innerText = "What did you buy?";
+                descInput.placeholder = "e.g., Rickshaw Fare, Utilities";
+                descInput.required = true;
+                presetsBox.style.display = 'none';
+            } else {
+                descLabel.innerText = "What did you eat?";
+                descInput.placeholder = "e.g., Chicken Biryani, Morning Tea";
+                descInput.required = true;
+                presetsBox.style.display = 'block';
+            }
+        }
+
         function setPreset(text, amount) {
             document.getElementById('description').value = text;
             document.getElementById('amount').value = amount;
             document.getElementById('type').value = 'Meal';
+            updateFormLabels();
         }
 
         function openSettings() {
@@ -161,7 +188,10 @@
         function handleFormSubmit(e) {
             e.preventDefault();
             const type = document.getElementById('type').value;
-            const description = document.getElementById('description').value;
+            let description = document.getElementById('description').value.trim();
+            if (!description) {
+                description = type === 'Income' ? 'Income / Fund' : 'Expense Item';
+            }
             const amount = parseFloat(document.getElementById('amount').value) || 0;
             const date = document.getElementById('entryDate').value;
 
@@ -243,6 +273,7 @@
             }).catch(err => console.log('Sync failed'));
         }
 
+        updateFormLabels();
         renderEntries();
     </script>
 </body>
