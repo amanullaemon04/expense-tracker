@@ -21,9 +21,6 @@
         button { cursor: pointer; border: none; font-family: inherit; }
         .btn-primary { width: 100%; background: #059669; color: #fff; font-weight: 600; padding: 12px; border-radius: 12px; font-size: 14px; transition: background 0.2s; }
         .btn-primary:hover { background: #047857; }
-        .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-        .preset-btn { background: #1f2937; color: #e2e8f0; border: 1px solid #374151; padding: 6px 12px; font-size: 12px; border-radius: 10px; transition: background 0.2s; }
-        .preset-btn:hover { background: #374151; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
         .badge-meal { background: rgba(16, 185, 129, 0.1); color: #34d399; }
@@ -38,6 +35,9 @@
         .dot { width: 6px; height: 6px; background: #34d399; border-radius: 50%; }
         .del-btn { background: none; color: #64748b; padding: 6px; }
         .del-btn:hover { color: #fb7185; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .summary-box { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; }
+        .summary-box.full { grid-column: span 2; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05)); border: 1px solid rgba(16, 185, 129, 0.3); }
     </style>
 </head>
 <body>
@@ -62,23 +62,28 @@
     </header>
 
     <div class="container">
+        <!-- Live Summary Cards -->
+        <div class="summary-grid">
+            <div class="summary-box">
+                <span style="font-size: 11px; color: #94a3b8;">Total Income</span>
+                <h3 id="totalIncomeDisplay" style="font-size: 16px; font-weight: 700; color: #818cf8; margin-top: 4px;">৳0.00</h3>
+            </div>
+            <div class="summary-box">
+                <span style="font-size: 11px; color: #94a3b8;">Total Expenses</span>
+                <h3 id="totalExpenseDisplay" style="font-size: 16px; font-weight: 700; color: #fb7185; margin-top: 4px;">৳0.00</h3>
+            </div>
+            <div class="summary-box full">
+                <span style="font-size: 11px; color: #34d399; font-weight: 600;">Current Balance (Available)</span>
+                <h2 id="netBalanceDisplay" style="font-size: 22px; font-weight: 700; color: #fff; margin-top: 4px;">৳0.00</h2>
+            </div>
+        </div>
+
         <!-- Add Entry Form -->
         <section class="card">
             <h2 id="formTitle">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Add Entry
             </h2>
-
-            <div id="presetsBox">
-                <label>Quick Food Presets:</label>
-                <div class="presets">
-                    <button type="button" onclick="setPreset('Breakfast', 50)" class="preset-btn">🍳 Breakfast (৳50)</button>
-                    <button type="button" onclick="setPreset('Lunch', 120)" class="preset-btn">🍛 Lunch (৳120)</button>
-                    <button type="button" onclick="setPreset('Dinner', 100)" class="preset-btn">🍽️ Dinner (৳100)</button>
-                    <button type="button" onclick="setPreset('Biryani', 180)" class="preset-btn">🍗 Biryani (৳180)</button>
-                    <button type="button" onclick="setPreset('Tea & Snacks', 30)" class="preset-btn">☕ Tea & Snacks (৳30)</button>
-                </div>
-            </div>
 
             <form id="entryForm" onsubmit="handleFormSubmit(event)">
                 <label>Type</label>
@@ -88,7 +93,7 @@
                     <option value="Income">Income / Fund</option>
                 </select>
 
-                <label id="descLabel">What did you eat / buy?</label>
+                <label id="descLabel">What did you eat?</label>
                 <input type="text" id="description" placeholder="e.g., Chicken Biryani, Morning Tea">
 
                 <label>Amount (৳)</label>
@@ -142,31 +147,20 @@
             const type = document.getElementById('type').value;
             const descLabel = document.getElementById('descLabel');
             const descInput = document.getElementById('description');
-            const presetsBox = document.getElementById('presetsBox');
 
             if (type === 'Income') {
                 descLabel.innerText = "Source / Note (Optional)";
                 descInput.placeholder = "e.g., Pocket Money, Tutoring Salary";
                 descInput.required = false;
-                presetsBox.style.display = 'none';
             } else if (type === 'Expense') {
                 descLabel.innerText = "What did you buy?";
                 descInput.placeholder = "e.g., Rickshaw Fare, Utilities";
                 descInput.required = true;
-                presetsBox.style.display = 'none';
             } else {
                 descLabel.innerText = "What did you eat?";
                 descInput.placeholder = "e.g., Chicken Biryani, Morning Tea";
                 descInput.required = true;
-                presetsBox.style.display = 'block';
             }
-        }
-
-        function setPreset(text, amount) {
-            document.getElementById('description').value = text;
-            document.getElementById('amount').value = amount;
-            document.getElementById('type').value = 'Meal';
-            updateFormLabels();
         }
 
         function openSettings() {
@@ -211,7 +205,27 @@
             renderEntries();
         }
 
+        function updateSummary() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            entries.forEach(item => {
+                if (item.type === 'Income') {
+                    totalIncome += item.amount;
+                } else {
+                    totalExpense += item.amount; // Meal and Expense both count towards spending
+                }
+            });
+
+            let netBalance = totalIncome - totalExpense;
+
+            document.getElementById('totalIncomeDisplay').innerText = `৳${totalIncome.toFixed(2)}`;
+            document.getElementById('totalExpenseDisplay').innerText = `৳${totalExpense.toFixed(2)}`;
+            document.getElementById('netBalanceDisplay').innerText = `৳${netBalance.toFixed(2)}`;
+        }
+
         function renderEntries() {
+            updateSummary();
             const listEl = document.getElementById('entriesList');
             const filterDate = document.getElementById('filterDate').value;
             
