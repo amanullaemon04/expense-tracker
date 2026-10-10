@@ -1,168 +1,640 @@
+```html
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en" class="h-full">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BADHAN ZH</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Supabase JS Library -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Meal & Expense Tracker (BDT)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 9999px;
+        }
+    </style>
 </head>
-<body>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300 flex flex-col">
 
-  <!-- Header -->
-  <header class="header">
-    <div class="header-container">
-      <h1 class="logo">🩸 BADHAN ZH</h1>
-      <div class="header-actions">
-        <a href="register.html" class="admin-link btn-primary-action">+ রক্তদাতা হন</a>
-        <a href="admin.html" class="admin-link">Admin</a>
-      </div>
-    </div>
-  </header>
+    <header class="w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-500/30">
+                    <i class="fa-solid fa-utensils text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-base leading-tight tracking-tight">Meal & Expense Log</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Daily Food & Cost Tracker</p>
+                </div>
+            </div>
 
-  <!-- Main Container -->
-  <main class="container">
-    
-    <!-- Filter Section -->
-    <section class="filter-card">
-      <div class="filter-grid">
+            <div class="flex items-center space-x-3">
+                <!-- Online/Offline Badge -->
+                <div id="connection-badge" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-all">
+                    <span id="connection-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="connection-text">Online</span>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-6 flex flex-col space-y-6 overflow-y-auto">
         
-        <!-- Blood Group Filter -->
-        <div class="filter-group">
-          <label for="blood">রক্তের গ্রুপ (Blood Group)</label>
-          <select id="blood">
-            <option value="">All Blood Groups</option>
-            <option value="A+">A+</option>
-            <option value="A-">A-</option>
-            <option value="B+">B+</option>
-            <option value="B-">B-</option>
-            <option value="O+">O+</option>
-            <option value="O-">O-</option>
-            <option value="AB+">AB+</option>
-            <option value="AB-">AB-</option>
-          </select>
+        <!-- Offline Sync Banner -->
+        <div id="sync-banner" class="hidden bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
+            <div class="flex items-start sm:items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                </div>
+                <div>
+                    <p class="font-medium text-amber-900 dark:text-amber-200">Unsynced offline data present</p>
+                    <p class="text-xs text-amber-700 dark:text-amber-400">Connection restored! Export anytime to save your Excel record.</p>
+                </div>
+            </div>
+            <button id="banner-export-btn" class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-medium transition-colors shadow-sm">
+                Export to Excel Now
+            </button>
         </div>
 
-        <!-- City Filter (64 Districts Alphabetical A-Z) -->
-        <div class="filter-group">
-          <label for="city">জেলা / শহর (City / District)</label>
-          <select id="city">
-            <option value="">All locations</option>
-            <option value="Bagerhat">Bagerhat</option>
-            <option value="Bandarban">Bandarban</option>
-            <option value="Barguna">Barguna</option>
-            <option value="Barishal">Barishal</option>
-            <option value="Bhola">Bhola</option>
-            <option value="Bogura">Bogura</option>
-            <option value="Brahmanbaria">Brahmanbaria</option>
-            <option value="Chandpur">Chandpur</option>
-            <option value="Chattogram">Chattogram</option>
-            <option value="Chuadanga">Chuadanga</option>
-            <option value="Cox's Bazar">Cox's Bazar</option>
-            <option value="Cumilla">Cumilla</option>
-            <option value="Dhaka">Dhaka</option>
-            <option value="Dinajpur">Dinajpur</option>
-            <option value="Faridpur">Faridpur</option>
-            <option value="Feni">Feni</option>
-            <option value="Gaibandha">Gaibandha</option>
-            <option value="Gazipur">Gazipur</option>
-            <option value="Gopalganj">Gopalganj</option>
-            <option value="Habiganj">Habiganj</option>
-            <option value="Jamalpur">Jamalpur</option>
-            <option value="Jashore">Jashore</option>
-            <option value="Jhalokati">Jhalokati</option>
-            <option value="Jhenaidah">Jhenaidah</option>
-            <option value="Joypurhat">Joypurhat</option>
-            <option value="Khagrachhari">Khagrachhari</option>
-            <option value="Khulna">Khulna</option>
-            <option value="Kishoreganj">Kishoreganj</option>
-            <option value="Kurigram">Kurigram</option>
-            <option value="Kushtia">Kushtia</option>
-            <option value="Lakshmipur">Lakshmipur</option>
-            <option value="Lalmonirhat">Lalmonirhat</option>
-            <option value="Madaripur">Madaripur</option>
-            <option value="Magura">Magura</option>
-            <option value="Manikganj">Manikganj</option>
-            <option value="Meherpur">Meherpur</option>
-            <option value="Moulvibazar">Moulvibazar</option>
-            <option value="Munshiganj">Munshiganj</option>
-            <option value="Mymensingh">Mymensingh</option>
-            <option value="Naogaon">Naogaon</option>
-            <option value="Narail">Narail</option>
-            <option value="Narayanganj">Narayanganj</option>
-            <option value="Narsingdi">Narsingdi</option>
-            <option value="Natore">Natore</option>
-            <option value="Netrokona">Netrokona</option>
-            <option value="Nilphamari">Nilphamari</option>
-            <option value="Noakhali">Noakhali</option>
-            <option value="Pabna">Pabna</option>
-            <option value="Panchagarh">Panchagarh</option>
-            <option value="Patuakhali">Patuakhali</option>
-            <option value="Pirojpur">Pirojpur</option>
-            <option value="Rajbari">Rajbari</option>
-            <option value="Rajshahi">Rajshahi</option>
-            <option value="Rangamati">Rangamati</option>
-            <option value="Rangpur">Rangpur</option>
-            <option value="Satkhira">Satkhira</option>
-            <option value="Shariatpur">Shariatpur</option>
-            <option value="Sherpur">Sherpur</option>
-            <option value="Sirajganj">Sirajganj</option>
-            <option value="Sunamganj">Sunamganj</option>
-            <option value="Sylhet">Sylhet</option>
-            <option value="Tangail">Tangail</option>
-            <option value="Thakurgaon">Thakurgaon</option>
-          </select>
+        <!-- Summary Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Total Meals Cost -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Meals / Food</p>
+                    <span class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
+                        <i class="fa-solid fa-bowl-food"></i>
+                    </span>
+                </div>
+                <h2 id="total-meals-cost" class="text-2xl font-bold mt-2 tracking-tight text-emerald-600 dark:text-emerald-400">৳0.00</h2>
+                <p id="total-meals-count" class="mt-2 text-xs text-slate-500 dark:text-slate-400">0 meal items logged</p>
+            </div>
+
+            <!-- General Expenses -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 dark:bg-rose-500/10 rounded-bl-full pointer-events-none"></div>
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Other Expenses</p>
+                    <span class="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xs font-bold">
+                        <i class="fa-solid fa-receipt"></i>
+                    </span>
+                </div>
+                <h2 id="total-expenses-cost" class="text-2xl font-bold mt-2 tracking-tight text-rose-600 dark:text-rose-400">৳0.00</h2>
+                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Bills, transport, misc</p>
+            </div>
+
+            <!-- Total Income -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-bl-full pointer-events-none"></div>
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Income</p>
+                    <span class="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold">
+                        <i class="fa-solid fa-wallet"></i>
+                    </span>
+                </div>
+                <h2 id="total-income-amount" class="text-2xl font-bold mt-2 tracking-tight text-indigo-600 dark:text-indigo-400">৳0.00</h2>
+                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">All time income</p>
+            </div>
         </div>
 
-        <!-- Specific Location Filter -->
-        <div class="filter-group">
-          <label for="location">নির্দিষ্ট এলাকা / হল (Specific Location)</label>
-          <input 
-            type="text" 
-            id="location" 
-            placeholder="e.g. Zahurul Huq Hall" 
-            autocomplete="off" 
-          />
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center space-x-2">
+                    <i class="fa-solid fa-plus-circle text-emerald-600 dark:text-emerald-400"></i>
+                    <span>Add New Food / Expense Entry</span>
+                </h3>
+            </div>
+
+            <!-- Quick Food Presets Bar -->
+            <div>
+                <p class="text-xs font-medium text-slate-400 mb-2">Quick Presets (Tap to select food):</p>
+                <div class="flex flex-wrap gap-1.5" id="presets-container">
+                    <button type="button" data-desc="Breakfast (Porota/Egg)" data-type="meal" data-cost="50" class="preset-btn px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium transition-colors">
+                        🍳 Breakfast (৳50)
+                    </button>
+                    <button type="button" data-desc="Lunch (Rice & Fish/Meat)" data-type="meal" data-cost="120" class="preset-btn px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium transition-colors">
+                        🍛 Lunch (৳120)
+                    </button>
+                    <button type="button" data-desc="Dinner" data-type="meal" data-cost="100" class="preset-btn px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium transition-colors">
+                        🍽️ Dinner (৳100)
+                    </button>
+                    <button type="button" data-desc="Biryani" data-type="meal" data-cost="180" class="preset-btn px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium transition-colors">
+                        🍗 Biryani (৳180)
+                    </button>
+                    <button type="button" data-desc="Tea & Snacks" data-type="meal" data-cost="30" class="preset-btn px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium transition-colors">
+                        ☕ Tea & Snacks (৳30)
+                    </button>
+                    <button type="button" data-desc="Bazar / Groceries" data-type="expense" data-cost="500" class="preset-btn px-2.5 py-1 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/50 text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium transition-colors">
+                        🛒 Bazar (৳500)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form id="entry-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
+                <!-- Category / Type -->
+                <div class="sm:col-span-3">
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Category</label>
+                    <select id="type-input" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="meal">🍽️ Meal / Food</option>
+                        <option value="expense">🧾 Expense / Bill</option>
+                        <option value="income">💰 Income</option>
+                    </select>
+                </div>
+
+                <!-- Description / Food Name -->
+                <div class="sm:col-span-4">
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Food / Item Description</label>
+                    <input type="text" id="desc-input" required placeholder="e.g. Chicken Biryani, Egg Porota" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <!-- Amount -->
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Cost (BDT)</label>
+                    <input type="number" step="0.01" min="0.01" id="amount-input" required placeholder="0.00" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <!-- Date -->
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Date</label>
+                    <input type="date" id="date-input" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <!-- Submit Button -->
+                <div class="sm:col-span-1 flex items-end">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium py-2 px-3 rounded-xl text-sm transition-colors shadow-sm shadow-emerald-600/30 flex items-center justify-center">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <!-- Availability Filter -->
-        <div class="filter-group">
-          <label for="status">স্ট্যাটাস (Availability)</label>
-          <select id="status">
-            <option value="">All</option>
-            <option value="available">Available</option>
-            <option value="unavailable">Unavailable</option>
-          </select>
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex-1 flex flex-col">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Date-wise Food & Expense History</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">See what you ate and spent organized by date.</p>
+                </div>
+
+                <div class="flex items-center space-x-2 w-full sm:w-auto">
+                    <!-- Date Filter -->
+                    <div class="relative">
+                        <input type="date" id="filter-date" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-600 dark:text-slate-300">
+                    </div>
+                    <button id="clear-filter-btn" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-1 hidden" title="Clear filter">All Dates</button>
+
+                    <!-- Export Excel Button -->
+                    <button id="export-excel-btn" class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors shadow-sm flex items-center space-x-1.5 shrink-0 ml-auto">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Export Excel (.xlsx)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Entries Grouped by Date Container -->
+            <div id="date-groups-container" class="space-y-6 flex-1 overflow-y-auto pr-1">
+                <!-- Dynamically rendered date cards -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex flex-col items-center justify-center py-16 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-lg mb-3">
+                    <i class="fa-solid fa-utensils"></i>
+                </div>
+                <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No meal or expense logs found</p>
+                <p class="text-xs text-slate-400 mt-1">Use the quick presets or add form above to log your food.</p>
+            </div>
         </div>
 
-      </div>
-    </section>
+    </main>
 
-    <!-- Results Section -->
-    <section class="results-section">
-      <div class="results-header">
-        <h2>Donors found: <span id="count">0</span></h2>
-      </div>
-      <div id="results" class="donor-grid">
-        <!-- Donor Cards will appear here -->
-      </div>
-    </section>
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div id="toast-content" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-3 rounded-2xl shadow-lg text-xs font-medium flex items-center space-x-2">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+            <span id="toast-msg">Action completed successfully</span>
+        </div>
+    </div>
 
-  </main>
+    <script>
+        // State Management
+        let entries = JSON.parse(localStorage.getItem('meal_tracker_bdt_entries')) || [
+            { id: '1', date: new Date().toISOString().split('T')[0], desc: 'Chicken Biryani', type: 'meal', amount: 180 },
+            { id: '2', date: new Date().toISOString().split('T')[0], desc: 'Morning Tea & Biscuit', type: 'meal', amount: 30 },
+            { id: '3', date: new Date().toISOString().split('T')[0], desc: 'Rickshaw Fare', type: 'expense', amount: 50 },
+            { id: '4', date: new Date().toISOString().split('T')[0], desc: 'Pocket Money / Salary', type: 'income', amount: 5000 }
+        ];
 
-  <!-- Footer -->
-  <footer class="footer">
-    <p>Use donor information responsibly. Confirm availability before contacting a donor.</p>
-  </footer>
+        let hasUnsyncedChanges = localStorage.getItem('meal_tracker_bdt_unsynced') === 'true';
 
-  <!-- Supabase Credentials Connected -->
-  <script>
-    window.SUPABASE_URL = "https://qqwuweskgtoqigfvvfso.supabase.co";
-    window.SUPABASE_ANON_KEY = "sb_publishable_A1qWn9h-TYg1dXxOgbYlxg_MXanpCxA";
-  </script>
+        // DOM Elements
+        const totalMealsCostEl = document.getElementById('total-meals-cost');
+        const totalMealsCountEl = document.getElementById('total-meals-count');
+        const totalExpensesCostEl = document.getElementById('total-expenses-cost');
+        const totalIncomeAmountEl = document.getElementById('total-income-amount');
+        const dateGroupsContainer = document.getElementById('date-groups-container');
+        const emptyStateEl = document.getElementById('empty-state');
+        const entryForm = document.getElementById('entry-form');
+        const descInput = document.getElementById('desc-input');
+        const amountInput = document.getElementById('amount-input');
+        const typeInput = document.getElementById('type-input');
+        const dateInput = document.getElementById('date-input');
+        const filterDate = document.getElementById('filter-date');
+        const clearFilterBtn = document.getElementById('clear-filter-btn');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        const bannerExportBtn = document.getElementById('banner-export-btn');
+        const syncBanner = document.getElementById('sync-banner');
+        const connectionBadge = document.getElementById('connection-badge');
+        const connectionDot = document.getElementById('connection-dot');
+        const connectionText = document.getElementById('connection-text');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
 
-  <!-- Application Logic -->
-  <script src="app.js"></script>
+        // Initialize Date Input to Today
+        const todayStr = new Date().toISOString().split('T')[0];
+        dateInput.value = todayStr;
+
+        // Preset buttons click listeners
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                descInput.value = btn.getAttribute('data-desc');
+                typeInput.value = btn.getAttribute('data-type');
+                amountInput.value = btn.getAttribute('data-cost');
+                descInput.focus();
+            });
+        });
+
+        // Theme Initialization
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            themeIcon.className = 'fa-solid fa-sun text-sm';
+        } else {
+            document.documentElement.classList.remove('dark');
+            themeIcon.className = 'fa-solid fa-moon text-sm';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                themeIcon.className = 'fa-solid fa-moon text-sm';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                themeIcon.className = 'fa-solid fa-sun text-sm';
+            }
+        });
+
+        // Online/Offline Detection
+        function updateConnectionStatus() {
+            if (navigator.onLine) {
+                connectionBadge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-all";
+                connectionDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                connectionText.textContent = "Online";
+
+                if (hasUnsyncedChanges) {
+                    syncBanner.classList.remove('hidden');
+                } else {
+                    syncBanner.classList.add('hidden');
+                }
+            } else {
+                connectionBadge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 transition-all";
+                connectionDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+                connectionText.textContent = "Offline Mode";
+                syncBanner.classList.add('hidden');
+            }
+        }
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
+        // Save State to LocalStorage
+        function saveState() {
+            localStorage.setItem('meal_tracker_bdt_entries', JSON.stringify(entries));
+            hasUnsyncedChanges = true;
+            localStorage.setItem('meal_tracker_bdt_unsynced', 'true');
+            if (navigator.onLine) {
+                syncBanner.classList.remove('hidden');
+            }
+            render();
+        }
+
+        // Render Application View
+        function render() {
+            const selectedDateFilter = filterDate.value;
+            
+            if (selectedDateFilter) {
+                clearFilterBtn.classList.remove('hidden');
+            } else {
+                clearFilterBtn.classList.add('hidden');
+            }
+
+            let filtered = entries;
+            if (selectedDateFilter) {
+                filtered = entries.filter(e => e.date === selectedDateFilter);
+            }
+
+            // Calculate overall totals
+            let totalMeals = 0;
+            let mealCount = 0;
+            let totalExpenses = 0;
+            let totalIncome = 0;
+
+            entries.forEach(e => {
+                const amt = parseFloat(e.amount);
+                if (e.type === 'meal') {
+                    totalMeals += amt;
+                    mealCount++;
+                } else if (e.type === 'expense') {
+                    totalExpenses += amt;
+                } else if (e.type === 'income') {
+                    totalIncome += amt;
+                }
+            });
+
+            totalMealsCostEl.textContent = formatCurrency(totalMeals);
+            totalMealsCountEl.textContent = `${mealCount} meal item${mealCount === 1 ? '' : 's'} logged`;
+            totalExpensesCostEl.textContent = formatCurrency(totalExpenses);
+            totalIncomeAmountEl.textContent = formatCurrency(totalIncome);
+
+            // Group filtered entries by date
+            const grouped = {};
+            filtered.forEach(e => {
+                if (!grouped[e.date]) {
+                    grouped[e.date] = [];
+                }
+                grouped[e.date].push(e);
+            });
+
+            // Sort dates descending
+            const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+
+            dateGroupsContainer.innerHTML = '';
+
+            if (sortedDates.length === 0) {
+                emptyStateEl.classList.remove('hidden');
+            } else {
+                emptyStateEl.classList.add('hidden');
+                
+                sortedDates.forEach(date => {
+                    const dayEntries = grouped[date];
+                    // Sort entries by most recent id or creation
+                    dayEntries.sort((a, b) => b.id - a.id);
+
+                    // Calculate date totals
+                    let dayMealTotal = 0;
+                    let dayExpTotal = 0;
+                    let dayIncTotal = 0;
+
+                    dayEntries.forEach(e => {
+                        const amt = parseFloat(e.amount);
+                        if (e.type === 'meal') dayMealTotal += amt;
+                        else if (e.type === 'expense') dayExpTotal += amt;
+                        else if (e.type === 'income') dayIncTotal += amt;
+                    });
+
+                    // Format date nicely
+                    const dateFormatted = new Date(date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4';
+
+                    let itemsHtml = '';
+                    dayEntries.forEach(e => {
+                        let badgeClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40';
+                        let iconClass = 'fa-bowl-food';
+                        let labelName = 'Meal';
+                        if (e.type === 'expense') {
+                            badgeClass = 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/40';
+                            iconClass = 'fa-receipt';
+                            labelName = 'Expense';
+                        } else if (e.type === 'income') {
+                            badgeClass = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/40';
+                            iconClass = 'fa-wallet';
+                            labelName = 'Income';
+                        }
+
+                        itemsHtml += `
+                            <div class="flex items-center justify-between py-2.5 px-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/80 mb-2 last:mb-0 shadow-xs">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs">
+                                        <i class="fa-solid ${iconClass}"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-800 dark:text-slate-200 text-sm">${escapeHTML(e.desc)}</p>
+                                        <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium ${badgeClass} mt-0.5">
+                                            ${labelName}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <span class="font-semibold text-sm ${e.type === 'income' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200'}">
+                                        ${e.type === 'income' ? '+' : ''}${formatCurrency(e.amount)}
+                                    </span>
+                                    <button onclick="deleteEntry('${e.id}')" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors inline-flex items-center justify-center" title="Delete">
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    groupDiv.innerHTML = `
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-200/60 dark:border-slate-800 gap-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-regular fa-calendar text-emerald-600 dark:text-emerald-400 text-xs"></i>
+                                <h4 class="font-semibold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider">${dateFormatted}</h4>
+                            </div>
+                            <div class="flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400">
+                                ${dayMealTotal > 0 ? `<span>Meals: <strong class="text-emerald-600 dark:text-emerald-400">${formatCurrency(dayMealTotal)}</strong></span>` : ''}
+                                ${dayExpTotal > 0 ? `<span>Expenses: <strong class="text-rose-600 dark:text-rose-400">${formatCurrency(dayExpTotal)}</strong></span>` : ''}
+                                ${dayIncTotal > 0 ? `<span>Income: <strong class="text-indigo-600 dark:text-indigo-400">${formatCurrency(dayIncTotal)}</strong></span>` : ''}
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            ${itemsHtml}
+                        </div>
+                    `;
+
+                    dateGroupsContainer.appendChild(groupDiv);
+                });
+            }
+        }
+
+        function formatCurrency(val) {
+            return '৳' + parseFloat(val).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // Form Submit Handler
+        entryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const desc = descInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            const type = typeInput.value;
+            const date = dateInput.value;
+
+            if (!desc || isNaN(amount) || amount <= 0 || !date) return;
+
+            const newEntry = {
+                id: Date.now().toString(),
+                date,
+                desc,
+                type,
+                amount
+            };
+
+            entries.push(newEntry);
+            saveState();
+
+            // Reset description and amount, keep date & category
+            descInput.value = '';
+            amountInput.value = '';
+            descInput.focus();
+
+            showToast('Food/Expense logged successfully');
+        });
+
+        // Delete Entry
+        window.deleteEntry = function(id) {
+            entries = entries.filter(e => e.id !== id);
+            saveState();
+            showToast('Entry removed');
+        };
+
+        // Filter events
+        filterDate.addEventListener('change', render);
+        clearFilterBtn.addEventListener('click', () => {
+            filterDate.value = '';
+            render();
+        });
+
+        // Excel Export Function using SheetJS
+        function exportToExcel() {
+            if (entries.length === 0) {
+                showToast('No entries to export', 'error');
+                return;
+            }
+
+            const wsData = [
+                ["ID", "Date", "Category", "Description", "Amount (BDT)"]
+            ];
+
+            // Sort chronologically for sheet
+            const sorted = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            sorted.forEach(e => {
+                wsData.push([
+                    e.id,
+                    e.date,
+                    e.type.toUpperCase(),
+                    e.desc,
+                    parseFloat(e.amount)
+                ]);
+            });
+
+            // Calculate summary values
+            let totalMeal = entries.filter(e => e.type === 'meal').reduce((sum, e) => sum + parseFloat(e.amount), 0);
+            let totalExp = entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + parseFloat(e.amount), 0);
+            let totalInc = entries.filter(e => e.type === 'income').reduce((sum, e) => sum + parseFloat(e.amount), 0);
+
+            wsData.push([]);
+            wsData.push(["Summary Report", "", "", "", ""]);
+            wsData.push(["Total Meals / Food", "", "", "", totalMeal]);
+            wsData.push(["Total Other Expenses", "", "", "", totalExp]);
+            wsData.push(["Total Income", "", "", "", totalInc]);
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            ws['!cols'] = [
+                {wch: 15},
+                {wch: 12},
+                {wch: 12},
+                {wch: 35},
+                {wch: 15}
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, "Daily Meals & Expenses");
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Meal_Expense_Tracker_${dateStr}.xlsx`);
+
+            hasUnsyncedChanges = false;
+            localStorage.setItem('meal_tracker_bdt_unsynced', 'false');
+            syncBanner.classList.add('hidden');
+
+            showToast('Excel spreadsheet downloaded!');
+        }
+
+        exportExcelBtn.addEventListener('click', exportToExcel);
+        bannerExportBtn.addEventListener('click', exportToExcel);
+
+        // Toast notification helper
+        function showToast(msg, type = 'success') {
+            toastMsg.textContent = msg;
+            const icon = document.getElementById('toast-icon');
+            if (type === 'error') {
+                icon.className = 'fa-solid fa-circle-exclamation text-rose-400';
+            } else {
+                icon.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // Initial Render
+        render();
+    </script>
 </body>
 </html>
+```
