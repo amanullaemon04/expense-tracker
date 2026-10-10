@@ -4,122 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meal & Expense Log</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
     <script src="[https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)"></script>
     <link href="[https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap)" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0d1117; color: #f0f6fc; }
-        .glass-card { background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .custom-shadow { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0d1117; color: #f0f6fc; padding-bottom: 50px; }
+        .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+        header { display: flex; justify-content: space-between; align-items: center; background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px 16px; position: sticky; top: 0; z-index: 50; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 8px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .card { background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 20px; margin-top: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+        h2 { font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        label { display: block; font-size: 12px; font-weight: 500; color: #94a3b8; margin-bottom: 6px; }
+        input, select { width: 100%; background: #090d16; border: 1px solid #30363d; border-radius: 12px; padding: 12px; font-size: 14px; color: #fff; outline: none; margin-bottom: 14px; }
+        input:focus, select:focus { border-color: #10b981; }
+        button { cursor: pointer; border: none; font-family: inherit; }
+        .btn-primary { width: 100%; background: #059669; color: #fff; font-weight: 600; padding: 12px; border-radius: 12px; font-size: 14px; transition: background 0.2s; }
+        .btn-primary:hover { background: #047857; }
+        .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .preset-btn { background: #1f2937; color: #e2e8f0; border: 1px solid #374151; padding: 6px 12px; font-size: 12px; border-radius: 10px; transition: background 0.2s; }
+        .preset-btn:hover { background: #374151; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
+        .badge-meal { background: rgba(16, 185, 129, 0.1); color: #34d399; }
+        .badge-expense { background: rgba(244, 63, 94, 0.1); color: #fb7185; }
+        .badge-income { background: rgba(99, 102, 241, 0.1); color: #818cf8; }
+        .entry-item { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-export { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 12px; font-size: 12px; border-radius: 10px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 100; display: none; }
+        .modal.active { display: flex; }
+        .modal-box { background: #161b22; border: 1px solid #30363d; border-radius: 16px; padding: 20px; width: 90%; max-width: 360px; }
+        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); display: flex; align-items: center; gap: 6px; }
+        .dot { width: 6px; height: 6px; background: #34d399; border-radius: 50%; }
+        .del-btn { background: none; color: #64748b; padding: 6px; }
+        .del-btn:hover { color: #fb7185; }
     </style>
 </head>
-<body class="min-h-screen pb-12">
-    <!-- Header -->
-    <header class="sticky top-0 z-50 glass-card border-b border-gray-800 px-4 py-3">
-        <div class="max-w-md mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="bg-emerald-600/20 text-emerald-400 p-2 rounded-xl">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+<body>
+    <header>
+        <div class="container" style="margin: 0; padding: 0; display: flex; width: 100%; justify-content: space-between; align-items: center;">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg text-white">Meal & Expense Log</h1>
-                    <p class="text-xs text-gray-400">Daily Food & Cost Tracker</p>
+                    <h1 style="font-size: 15px; font-weight: 700; color: #fff;">Meal & Expense Log</h1>
+                    <p style="font-size: 11px; color: #94a3b8;">Daily Food & Cost Tracker</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-2">
-                <span id="netStatus" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-400 rounded-full animate-pulse"></span> Online
-                </span>
-                <button onclick="openSettings()" class="p-2 glass-card rounded-xl hover:bg-gray-800 text-gray-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="status-badge" id="netStatus"><span class="dot"></span> Online</span>
+                <button onclick="openSettings()" style="background: #1f2937; border: 1px solid #374151; padding: 8px; border-radius: 10px; color: #cbd5e1;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="max-w-md mx-auto px-4 mt-6 space-y-6">
+    <div class="container">
         <!-- Add Entry Form -->
-        <section class="glass-card rounded-2xl p-5 custom-shadow">
-            <h2 class="text-sm font-semibold text-gray-300 mb-4 flex items-center">
-                <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <section class="card">
+            <h2>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Add What You Ate / Spent
             </h2>
 
-            <!-- Quick Presets -->
-            <div class="mb-4">
-                <label class="block text-xs font-medium text-gray-400 mb-2">Quick Food Presets:</label>
-                <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="setPreset('Breakfast', 50)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs rounded-xl border border-gray-700 text-gray-200 transition">🍳 Breakfast (৳50)</button>
-                    <button type="button" onclick="setPreset('Lunch', 120)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs rounded-xl border border-gray-700 text-gray-200 transition">🍛 Lunch (৳120)</button>
-                    <button type="button" onclick="setPreset('Dinner', 100)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs rounded-xl border border-gray-700 text-gray-200 transition">🍽️ Dinner (৳100)</button>
-                    <button type="button" onclick="setPreset('Biryani', 180)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs rounded-xl border border-gray-700 text-gray-200 transition">🍗 Biryani (৳180)</button>
-                    <button type="button" onclick="setPreset('Tea & Snacks', 30)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs rounded-xl border border-gray-700 text-gray-200 transition">☕ Tea & Snacks (৳30)</button>
-                </div>
+            <label>Quick Food Presets:</label>
+            <div class="presets">
+                <button type="button" onclick="setPreset('Breakfast', 50)" class="preset-btn">🍳 Breakfast (৳50)</button>
+                <button type="button" onclick="setPreset('Lunch', 120)" class="preset-btn">🍛 Lunch (৳120)</button>
+                <button type="button" onclick="setPreset('Dinner', 100)" class="preset-btn">🍽️ Dinner (৳100)</button>
+                <button type="button" onclick="setPreset('Biryani', 180)" class="preset-btn">🍗 Biryani (৳180)</button>
+                <button type="button" onclick="setPreset('Tea & Snacks', 30)" class="preset-btn">☕ Tea & Snacks (৳30)</button>
             </div>
 
-            <form id="entryForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Type</label>
-                    <select id="type" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-                        <option value="Meal">Meal / Food</option>
-                        <option value="Expense">Other Expense</option>
-                        <option value="Income">Income / Fund</option>
-                    </select>
-                </div>
+            <form id="entryForm" onsubmit="handleFormSubmit(event)">
+                <label>Type</label>
+                <select id="type">
+                    <option value="Meal">Meal / Food</option>
+                    <option value="Expense">Other Expense</option>
+                    <option value="Income">Income / Fund</option>
+                </select>
 
-                <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">What did you eat / buy?</label>
-                    <input type="text" id="description" required placeholder="e.g., Chicken Biryani, Morning Tea" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-                </div>
+                <label>What did you eat / buy?</label>
+                <input type="text" id="description" required placeholder="e.g., Chicken Biryani, Morning Tea">
 
-                <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Amount (৳)</label>
-                    <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-                </div>
+                <label>Amount (৳)</label>
+                <input type="number" step="0.01" id="amount" required placeholder="0.00">
 
-                <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Date</label>
-                    <input type="date" id="entryDate" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-                </div>
+                <label>Date</label>
+                <input type="date" id="entryDate" required>
 
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    <span>Save Entry</span>
-                </button>
+                <button type="submit" class="btn-primary">Save Entry</button>
             </form>
         </section>
 
         <!-- History & Export -->
-        <section class="glass-card rounded-2xl p-5 custom-shadow space-y-4">
-            <div class="flex items-center justify-between">
-                <h2 class="text-sm font-semibold text-gray-300">Food & Expense History</h2>
-                <button onclick="exportToExcel()" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-medium flex items-center space-x-1.5 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    <span>Export Excel</span>
+        <section class="card">
+            <div class="flex-between" style="margin-bottom: 12px;">
+                <h2 style="margin: 0;">Food & Expense History</h2>
+                <button onclick="exportToExcel()" class="btn-export">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export Excel
                 </button>
             </div>
 
-            <!-- Filter Date -->
-            <div>
-                <input type="date" id="filterDate" onchange="renderEntries()" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-emerald-500">
-            </div>
+            <input type="date" id="filterDate" onchange="renderEntries()">
 
-            <!-- List Container -->
-            <div id="entriesList" class="space-y-3">
-                <!-- Dynamic items rendered here -->
+            <div id="entriesList" style="margin-top: 10px;">
+                <!-- Items -->
             </div>
         </section>
-    </main>
+    </div>
 
     <!-- Settings Modal -->
-    <div id="settingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
-        <div class="glass-card rounded-2xl p-6 max-w-sm w-full mx-4 space-y-4 border border-gray-700">
-            <h3 class="font-bold text-base text-white">Google Sheet Sync Settings</h3>
-            <p class="text-xs text-gray-400">Enter your Google Apps Script Web App URL to automatically sync data to Google Sheets.</p>
-            <input type="text" id="scriptUrlInput" placeholder="[https://script.google.com/macros/s/.../exec](https://script.google.com/macros/s/.../exec)" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-            <div class="flex space-x-2">
-                <button onclick="saveSettings()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-semibold">Save</button>
-                <button onclick="closeSettings()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-xl text-xs font-semibold">Cancel</button>
+    <div id="settingsModal" class="modal">
+        <div class="modal-box">
+            <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 8px;">Google Sheet Sync Settings</h3>
+            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Enter your Google Apps Script Web App URL.</p>
+            <input type="text" id="scriptUrlInput" placeholder="[https://script.google.com/macros/s/.../exec](https://script.google.com/macros/s/.../exec)">
+            <div style="display: flex; gap: 8px;">
+                <button onclick="saveSettings()" class="btn-primary" style="padding: 10px;">Save</button>
+                <button onclick="closeSettings()" style="background: #374151; color: #fff; border-radius: 12px; padding: 10px; font-weight: 600; width: 100%;">Cancel</button>
             </div>
         </div>
     </div>
@@ -138,15 +144,15 @@
 
         function openSettings() {
             document.getElementById('scriptUrlInput').value = scriptUrl;
-            document.getElementById('settingsModal').classList.remove('hidden');
+            document.getElementById('settingsModal').classList.add('active');
         }
 
         function closeSettings() {
-            document.getElementById('settingsModal').classList.add('hidden');
+            document.getElementById('settingsModal').classList.remove('active');
         }
 
         function saveSettings() {
-            scriptUrl = document.getElementById('scriptUrlInput'].value.trim();
+            scriptUrl = document.getElementById('scriptUrlInput').value.trim();
             localStorage.setItem('google_script_url', scriptUrl);
             closeSettings();
             alert('Settings saved successfully!');
@@ -185,29 +191,32 @@
             }
 
             if (filtered.length === 0) {
-                listEl.innerHTML = `<p class="text-center text-xs text-gray-500 py-4">No entries found.</p>`;
+                listEl.innerHTML = `<p style="text-align: center; font-size: 12px; color: #64748b; padding: 15px;">No entries found.</p>`;
                 return;
             }
 
-            listEl.innerHTML = filtered.map(item => `
-                <div class="bg-gray-900/50 border border-gray-800/80 rounded-xl p-3 flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${item.type === 'Meal' ? 'bg-emerald-500/10 text-emerald-400' : item.type === 'Income' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-rose-500/10 text-rose-400'}">${item.type}</span>
-                            <span class="text-xs text-gray-400">${item.date}</span>
+            listEl.innerHTML = filtered.map(item => {
+                let badgeClass = item.type === 'Meal' ? 'badge-meal' : item.type === 'Income' ? 'badge-income' : 'badge-expense';
+                return `
+                    <div class="entry-item">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span class="badge ${badgeClass}">${item.type}</span>
+                                <span style="font-size: 11px; color: #94a3b8;">${item.date}</span>
+                            </div>
+                            <p style="font-size: 14px; font-weight: 500; color: #fff;">
+                                ${item.description} <span style="color: #94a3b8; font-size: 12px;">(৳${item.amount.toFixed(2)})</span>
+                            </p>
                         </div>
-                        <p class="text-sm font-medium text-white mt-1">
-                            ${item.description} <span class="text-gray-400 text-xs">(৳${item.amount.toFixed(2)})</span>
-                        </p>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 14px; font-weight: 700; color: ${item.type === 'Income' ? '#818cf8' : '#fff'};">৳${item.amount.toFixed(2)}</span>
+                            <button onclick="deleteEntry(${item.id})" class="del-btn">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <span class="text-sm font-bold ${item.type === 'Income' ? 'text-indigo-400' : 'text-white'}">৳${item.amount.toFixed(2)}</span>
-                        <button onclick="deleteEntry(${item.id})" class="text-gray-500 hover:text-rose-400 p-1 transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function exportToExcel() {
