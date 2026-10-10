@@ -138,6 +138,21 @@
     </div>
 
     <script>
+        // Register Service Worker for Offline PWA Support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('data:text/javascript;base64,' + btoa(`
+                    self.addEventListener('install', e => self.skipWaiting());
+                    self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+                    self.addEventListener('fetch', e => {
+                        e.respondWith(
+                            fetch(e.request).catch(() => caches.match(e.request).then(res => res || caches.match('./')))
+                        );
+                    });
+                `)).catch(err => console.log('SW registration failed'));
+            });
+        }
+
         let entries = JSON.parse(localStorage.getItem('meal_expense_entries')) || [];
         let scriptUrl = localStorage.getItem('google_script_url') || '';
 
@@ -213,7 +228,7 @@
                 if (item.type === 'Income') {
                     totalIncome += item.amount;
                 } else {
-                    totalExpense += item.amount; // Meal and Expense both count towards spending
+                    totalExpense += item.amount;
                 }
             });
 
